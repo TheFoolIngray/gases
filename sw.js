@@ -1,6 +1,6 @@
 // Service worker: guarda la app en el dispositivo para que funcione sin internet.
 // Al cambiar cualquier archivo, sube el número de VERSION para que se actualice.
-const VERSION = "v3";
+const VERSION = "v7";
 const CACHE = `gaslab-${VERSION}`;
 const FILES = [
   "./",
@@ -14,6 +14,8 @@ const FILES = [
   "./js/units.js",
   "./js/validation.js",
   "./js/vdw.js",
+  "./img/logo-uv.png",
+  "./img/logo-fcq.png",
   "./icons/icon.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
