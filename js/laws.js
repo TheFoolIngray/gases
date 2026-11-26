@@ -172,18 +172,82 @@ const IDEAL = {
   },
 };
 
-// (a [L²·atm/mol²], b [L/mol]) — valores típicos de tablas
-export const VDW_GASES = {
-  "He": [0.0346, 0.0238],
-  "H₂": [0.2476, 0.02661],
-  "N₂": [1.37, 0.0387],
-  "O₂": [1.382, 0.03186],
-  "Ar": [1.355, 0.03201],
-  "CO₂": [3.64, 0.04267],
-  "CH₄": [2.283, 0.04278],
-  "NH₃": [4.225, 0.0371],
-  "H₂O": [5.536, 0.03049],
-};
+// Tabla de constantes de Van der Waals.
+// Fuente: LibreTexts, «A8: van der Waal's Constants for Real Gases».
+// La tabla trae a en L²·bar/mol² y b en L/mol. La app calcula con atm (R en L·atm/(mol·K)),
+// así que a se convierte con 1 bar = 0.986923 atm. Cada fila: [fórmula, nombre, a (bar), b].
+const BAR_TO_ATM = 0.986923;
+
+export const VDW_TABLE = [
+  { group: "Gases nobles", rows: [
+    ["He", "Helio", 0.0346, 0.0238],
+    ["Ne", "Neón", 0.208, 0.01672],
+    ["Ar", "Argón", 1.355, 0.03201],
+    ["Kr", "Kriptón", 2.325, 0.0396],
+    ["Xe", "Xenón", 4.192, 0.05156],
+  ] },
+  { group: "Gases diatómicos y óxidos", rows: [
+    ["H₂", "Hidrógeno", 0.2453, 0.02651],
+    ["N₂", "Nitrógeno", 1.370, 0.0387],
+    ["O₂", "Oxígeno", 1.382, 0.03186],
+    ["F₂", "Flúor", 1.171, 0.02896],
+    ["Cl₂", "Cloro", 6.343, 0.05422],
+    ["CO", "Monóxido de carbono", 1.472, 0.03948],
+    ["NO", "Óxido nítrico", 1.46, 0.0289],
+    ["N₂O", "Óxido nitroso", 3.852, 0.04435],
+    ["NO₂", "Dióxido de nitrógeno", 5.36, 0.0443],
+    ["O₃", "Ozono", 3.570, 0.0487],
+  ] },
+  { group: "Compuestos inorgánicos", rows: [
+    ["CO₂", "Dióxido de carbono", 3.658, 0.04286],
+    ["H₂O", "Agua", 5.537, 0.03049],
+    ["NH₃", "Amoníaco", 4.225, 0.03713],
+    ["H₂S", "Sulfuro de hidrógeno", 4.544, 0.04339],
+    ["SO₂", "Dióxido de azufre", 6.865, 0.05679],
+    ["HCl", "Cloruro de hidrógeno", 3.700, 0.04061],
+    ["HBr", "Bromuro de hidrógeno", 4.500, 0.04415],
+    ["HF", "Fluoruro de hidrógeno", 9.565, 0.0739],
+    ["HCN", "Cianuro de hidrógeno", 11.29, 0.08806],
+    ["SF₆", "Hexafluoruro de azufre", 7.857, 0.08786],
+  ] },
+  { group: "Hidrocarburos", rows: [
+    ["CH₄", "Metano", 2.300, 0.04301],
+    ["C₂H₆", "Etano", 5.570, 0.06499],
+    ["C₃H₈", "Propano", 9.385, 0.09044],
+    ["C₄H₁₀", "Butano", 13.93, 0.1168],
+    ["i-C₄H₁₀", "Isobutano", 13.36, 0.1168],
+    ["C₅H₁₂", "Pentano", 19.13, 0.1451],
+    ["C₆H₁₄", "Hexano", 24.97, 0.1753],
+    ["C₂H₄", "Etileno", 4.612, 0.05821],
+    ["C₂H₂", "Acetileno", 4.516, 0.0522],
+    ["C₃H₆", "Propeno", 8.438, 0.08242],
+    ["C₆H₆", "Benceno", 18.82, 0.1193],
+    ["C₆H₁₂", "Ciclohexano", 21.95, 0.1413],
+    ["C₇H₈", "Tolueno", 24.89, 0.1499],
+  ] },
+  { group: "Otros compuestos orgánicos", rows: [
+    ["CH₃OH", "Metanol", 9.472, 0.06584],
+    ["C₂H₅OH", "Etanol", 12.56, 0.0871],
+    ["C₃H₆O", "Acetona", 16.02, 0.1124],
+    ["C₄H₁₀O", "Éter dietílico", 17.46, 0.1333],
+    ["CH₃COOH", "Ácido acético", 17.71, 0.1065],
+    ["CCl₄", "Tetracloruro de carbono", 20.01, 0.1281],
+    ["CHCl₃", "Cloroformo", 15.34, 0.1019],
+    ["CH₃Cl", "Clorometano", 7.566, 0.06477],
+  ] },
+];
+
+// { fórmula: [a (L²·atm/mol²), b (L/mol)] } — lo que usa la pantalla para rellenar los campos.
+export const VDW_GASES = {};
+// { fórmula: { name, group, aBar, a, b } } — para la tabla de consulta.
+export const VDW_INFO = {};
+for (const { group, rows } of VDW_TABLE) {
+  for (const [formula, name, aBar, b] of rows) {
+    const a = Number((aBar * BAR_TO_ATM).toPrecision(4));
+    VDW_GASES[formula] = [a, b];
+    VDW_INFO[formula] = { name, group, aBar, a, b };
+  }
+}
 
 const VAN_DER_WAALS = {
   id: "vdw",

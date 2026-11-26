@@ -1,31 +1,17 @@
 // Interfaz: cabecera institucional, menú, pantalla de cada ley, tema y registro de la PWA.
 
-import { ALL_LAWS, LAWS_BY_ID } from "./laws.js";
+import { ALL_LAWS, LAWS_BY_ID, VDW_TABLE } from "./laws.js";
 import { solve } from "./solver.js";
 import { InputError } from "./validation.js";
 import { UNITS_BY_KIND, fmt } from "./units.js";
 import { chartSpec, renderChart } from "./chart.js";
+import { h } from "./dom.js";
+import { createSimulation } from "./sim.js";
 
 const app = document.getElementById("app");
 const CUSTOM_GAS = "Personalizado";
 
 // ------------------------------------------------------------ utilidades DOM
-function h(tag, attrs = {}, ...children) {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (v === undefined || v === null || v === false) continue;
-    if (k === "class") node.className = v;
-    else if (k === "style") node.style.cssText = v;
-    else if (k.startsWith("on")) node.addEventListener(k.slice(2).toLowerCase(), v);
-    else node.setAttribute(k, v === true ? "" : v);
-  }
-  for (const c of children.flat(Infinity)) {
-    if (c === null || c === undefined || c === false) continue;
-    node.append(c.nodeType ? c : document.createTextNode(String(c)));
-  }
-  return node;
-}
-
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* opcional */ } },
@@ -124,6 +110,13 @@ function renderHome() {
       h("p", { class: "page-intro muted" },
         "Elige una función. En cada una, llena los datos que conoces y deja en blanco el que quieres calcular: la app despeja, convierte unidades y muestra el procedimiento."),
       h("ol", { class: "menu" }, items),
+      h("ul", { class: "menu menu-info" },
+        h("li", {},
+          h("a", { class: "tile", href: "#/about" },
+            h("span", { class: "key-num", "aria-hidden": "true" }, "i"),
+            h("span", { class: "tile-main" },
+              h("b", {}, "Acerca de la aplicación"),
+              h("small", {}, "Materia, equipo, docente y fecha"))))),
       h("div", { class: "lcd lcd-mini", style: "margin-top:16px" },
         h("div", {}, "R = 0.082057 L·atm/(mol·K)"),
         h("div", {}, "T en kelvin · resultados a 6 cifras significativas")),
@@ -190,6 +183,7 @@ function renderLaw(law) {
   const fields = {};
   const results = h("div", { class: "results", "aria-live": "polite" });
   let gasSelect = null;
+  const sim = law.gasPresets ? createSimulation("CO₂") : null;
   const exampleNote = h("div", { class: "note", hidden: true });
   let chartCounter = 0;
 
@@ -288,6 +282,7 @@ function renderLaw(law) {
     fields.a.set(String(a));
     fields.b.set(String(b));
     if (gasSelect) gasSelect.value = name;
+    if (sim) sim.setGas(name); // la simulación sigue al gas elegido
   }
 
   function loadExample() {
@@ -317,11 +312,76 @@ function renderLaw(law) {
 
   if (law.gasPresets) {
     gasSelect = h("select", { class: "select select-wide", id: "gas-select", "aria-label": "Gas" },
-      [CUSTOM_GAS, ...Object.keys(law.gasPresets)].map((g) => h("option", { value: g }, g)));
+      h("option", { value: CUSTOM_GAS }, CUSTOM_GAS),
+      VDW_TABLE.map(({ group, rows }) =>
+        h("optgroup", { label: group },
+          rows.map(([formula, name]) => h("option", { value: formula }, `${formula} · ${name}`)))));
     gasSelect.addEventListener("change", () => {
       if (gasSelect.value !== CUSTOM_GAS) applyGas(gasSelect.value);
       refreshUnknown();
     });
+  }
+
+  // Tabla de consulta de constantes a y b (solo Van der Waals): se filtra y al tocar una fila se carga.
+  function constantsTable() {
+    const status = h("div", { class: "hint ref-status", "aria-live": "polite" }, "Toca una fila para usar ese gas.");
+    const search = h("input", {
+      class: "input ref-search", type: "search", placeholder: "Buscar por nombre o fórmula",
+      "aria-label": "Buscar gas en la tabla", autocomplete: "off", spellcheck: "false",
+    });
+    const groups = VDW_TABLE.map(({ group, rows }) => {
+      const head = h("tr", { class: "group" }, h("td", { colspan: 4 }, group));
+      const items = rows.map(([formula, name, aBar, b]) => {
+        const [a] = law.gasPresets[formula];
+        const pick = () => {
+          applyGas(formula);
+          refreshUnknown();
+          status.textContent = `Cargado: ${formula} (${name}) · a = ${a} L²·atm/mol², b = ${b} L/mol`;
+        };
+        const tr = h("tr", { class: "pick", tabindex: "0", role: "button", "aria-label": `Usar ${name}`, onClick: pick },
+          h("td", {}, h("b", {}, formula)),
+          h("td", {}, name),
+          h("td", { class: "num" }, String(a)),
+          h("td", { class: "num" }, String(b)));
+        tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+        return { tr, text: `${formula} ${name}`.toLowerCase() };
+      });
+      return { head, items };
+    });
+    const tbody = h("tbody", {}, groups.map((g) => [g.head, g.items.map((i) => i.tr)]));
+    const empty = h("div", { class: "muted small ref-empty", hidden: true }, "Ningún gas coincide. Escribe tus propios valores de a y b.");
+    search.addEventListener("input", () => {
+      const q = search.value.trim().toLowerCase();
+      let any = false;
+      for (const g of groups) {
+        let shown = 0;
+        for (const i of g.items) {
+          const ok = !q || i.text.includes(q);
+          i.tr.hidden = !ok;
+          if (ok) shown++;
+        }
+        g.head.hidden = shown === 0;
+        if (shown) any = true;
+      }
+      empty.hidden = any;
+    });
+    const total = groups.reduce((n, g) => n + g.items.length, 0);
+    return h("details", { class: "ref", id: "vdw-table" },
+      h("summary", {}, `Tabla de constantes a y b (${total} sustancias)`),
+      h("div", { class: "ref-body" },
+        search,
+        h("p", { class: "muted small" }, "a en L²·atm/mol² · b en L/mol"),
+        h("div", { class: "ref-scroll" },
+          h("table", { class: "ref-table" },
+            h("thead", {}, h("tr", {},
+              h("th", {}, "Fórmula"), h("th", {}, "Sustancia"),
+              h("th", { class: "num" }, "a"), h("th", { class: "num" }, "b"))),
+            tbody)),
+        empty,
+        status,
+        h("p", { class: "muted small" },
+          "Fuente: LibreTexts, tabla A8 (valores en L²·bar/mol², convertidos a atm con 1 bar = 0.986923 atm). ",
+          "Cambian un poco de una fuente a otra; si tu libro usa otros, escríbelos en los campos.")));
   }
 
   const number = ALL_LAWS.indexOf(law) + 1;
@@ -347,8 +407,44 @@ function renderLaw(law) {
     institutionalHeader(),
     appbar(law.name, true),
     h("main", { class: "page law-page", "data-law": law.id },
-      h("div", { class: "law-left" }, theory, inputs),
-      h("div", { class: "law-right" }, results)));
+      h("div", { class: "law-left" }, theory, inputs, law.gasPresets && constantsTable()),
+      h("div", { class: "law-right" }, results, sim && sim.el)));
+}
+
+// ------------------------------------------------------------ acerca de
+const ABOUT = {
+  app: "Laboratorio de Gases",
+  course: "Termodinámica",
+  teacher: "Carlos Alberto Martínez Carmona",
+  group: "IBIO",
+  date: "27/11/2026",
+  members: ["Omar Díaz Montalvo", "Abisai Herrera Velasco", "Jesús Serafín Castillo Torres", "Emanuel Tiburcio Romero"],
+};
+
+function renderAbout() {
+  const row = (label, value) => [h("dt", {}, label), h("dd", {}, value)];
+  return h("div", {},
+    institutionalHeader(),
+    appbar("Acerca de", true),
+    h("main", { class: "page about", "data-page": "about" },
+      h("div", { class: "about-grid" },
+        panel("Datos de la actividad",
+          h("dl", { class: "about-dl" },
+            row("Aplicación", ABOUT.app),
+            row("Experiencia educativa", ABOUT.course),
+            row("Docente", ABOUT.teacher),
+            row("Grupo", ABOUT.group),
+            row("Fecha de creación", ABOUT.date),
+            row("Institución", "Universidad Veracruzana · Facultad de Ciencias Químicas, Orizaba"))),
+        panel("Integrantes del equipo",
+          h("ol", { class: "about-members" }, ABOUT.members.map((n) => h("li", {}, n)))),
+        panel("Sobre la aplicación",
+          h("p", {}, "Resuelve y simula las leyes de Boyle, Charles, Gay-Lussac, la ley combinada, los gases ideales y la ecuación de Van der Waals. " +
+            "Despeja la incógnita que dejes en blanco, convierte unidades y muestra el procedimiento paso a paso."),
+          h("p", {}, "Está hecha con HTML, CSS y JavaScript como aplicación web instalable (PWA): funciona en Android, iOS y escritorio, y sin conexión una vez instalada."),
+          h("p", { class: "muted small" },
+            "Constante R = 0.082057 L·atm/(mol·K). Constantes a y b de Van der Waals: LibreTexts, tabla A8 (convertidas a atm)."))))
+  );
 }
 
 // ------------------------------------------------------------- navegación
@@ -356,7 +452,7 @@ function route() {
   const hash = location.hash.replace(/^#/, "") || "/";
   const m = hash.match(/^\/law\/([\w-]+)$/);
   const law = m && LAWS_BY_ID[m[1]];
-  const view = law ? renderLaw(law) : renderHome();
+  const view = law ? renderLaw(law) : hash === "/about" ? renderAbout() : renderHome();
   document.title = law ? `${law.name} · Laboratorio de Gases` : "Laboratorio de Gases";
   app.replaceChildren(view);
   window.scrollTo(0, 0);

@@ -153,3 +153,13 @@ export function idealValue(unknown, v) {
 export function percentDifference(real, ideal) {
   return ideal ? ((real - ideal) / ideal) * 100 : NaN;
 }
+
+// Punto crítico de Van der Waals: por encima de Tc el gas no se puede condensar.
+export function criticalPoint(a, b) {
+  return { Tc: (8 * a) / (27 * R * b), Pc: a / (27 * b * b), Vc: 3 * b };
+}
+
+// Factor de compresibilidad Z = P·V / (n·R·T). Z = 1 para el gas ideal.
+export function compressibility(P, V, n, T) {
+  return (P * V) / (n * R * T);
+}

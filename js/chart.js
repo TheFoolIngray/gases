@@ -5,7 +5,7 @@ import * as vdw from "./vdw.js";
 
 const NS = "http://www.w3.org/2000/svg";
 
-function niceTicks(lo, hi, target = 5) {
+export function niceTicks(lo, hi, target = 5) {
   const span = hi - lo || 1;
   const raw = span / target;
   const mag = Math.pow(10, Math.floor(Math.log10(raw)));

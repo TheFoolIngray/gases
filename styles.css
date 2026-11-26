@@ -126,10 +126,16 @@ code, pre { font-family: var(--mono); }
 .inst-text strong { display: block; font-size: 16px; color: var(--heading-ink); }
 .inst-text span { display: block; font-size: 13px; color: var(--muted); }
 .logo-uv { height: 52px; width: auto; display: block; }
-.logo-fcq { height: 52px; width: auto; display: block; border-radius: 3px; }
+.logo-fcq { height: 52px; width: auto; display: block; border-radius: 4px; }
+/* El logo tiene líneas negras: en modo oscuro va sobre una placa blanca para que se lea. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo-fcq { background: #fff; padding: 2px; }
+}
+:root[data-theme="dark"] .logo-fcq { background: #fff; padding: 2px; }
 @media (max-width: 520px) {
   .inst { gap: 10px; padding-left: 12px; padding-right: 12px; }
-  .logo-uv, .logo-fcq { height: 42px; }
+  .logo-uv { height: 42px; }
+  .logo-fcq { height: 48px; }
   .inst-text strong { font-size: 14px; }
   .inst-text span { font-size: 12px; }
 }
@@ -309,3 +315,53 @@ code, pre { font-family: var(--mono); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ---------- tabla de constantes de Van der Waals ---------- */
+details.ref { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; min-width: 0; }
+details.ref > summary {
+  list-style: none; cursor: pointer; display: flex; justify-content: space-between; gap: 8px;
+  padding: 8px 14px; background: var(--bar); color: #fff; font-size: 14px; font-weight: 650;
+  border-bottom: 2px solid var(--bar-edge);
+}
+details.ref > summary::-webkit-details-marker { display: none; }
+details.ref > summary::after { content: "▸"; }
+details.ref[open] > summary::after { content: "▾"; }
+.ref-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.ref-search { width: 100%; text-align: left; font-family: inherit; font-size: 15px; }
+.ref-scroll { max-height: 340px; overflow: auto; border: 1px solid var(--rule); border-radius: var(--radius); }
+.ref-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ref-table th { position: sticky; top: 0; background: var(--key); color: var(--key-ink); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--key-edge); white-space: nowrap; }
+.ref-table td { padding: 5px 8px; border-bottom: 1px solid var(--rule); }
+.ref-table .num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.ref-table tr[hidden] { display: none; }
+.ref-table tr.group td { background: var(--field); color: var(--heading-ink); font-weight: 650; }
+.ref-table tr.pick { cursor: pointer; }
+.ref-table tr.pick:hover td, .ref-table tr.pick:focus-visible td { background: var(--field); }
+.ref-table tr.pick:focus-visible { outline: 2px solid var(--uv-blue); outline-offset: -2px; }
+.ref-empty[hidden] { display: none; }
+.ref-status { min-height: 1.2em; }
+
+/* ---------- simulación interactiva ---------- */
+.sim-row { display: flex; flex-direction: column; gap: 6px; }
+.sim-row label { font-size: 15px; }
+.sim-val { font-family: var(--mono); font-weight: 600; margin-left: 4px; }
+.sim input[type="range"] { width: 100%; accent-color: var(--uv-blue); height: 28px; margin: 0; }
+.sim .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.sim-readout { line-height: 1.6; }
+.chart .sim-vline { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.chart .sim-dot-ideal { fill: var(--curve-1); stroke: var(--paper); stroke-width: 2; }
+.chart .sim-crit { fill: var(--uv-green); stroke: var(--paper); stroke-width: 1.5; }
+
+/* ---------- acerca de ---------- */
+.about-grid { display: grid; gap: 16px; grid-template-columns: 1fr; max-width: 760px; }
+.about-dl { margin: 0; display: grid; grid-template-columns: 1fr; gap: 2px 14px; }
+.about-dl dt { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-top: 8px; }
+.about-dl dd { margin: 0; font-size: 16px; font-weight: 600; }
+@media (min-width: 560px) {
+  .about-dl { grid-template-columns: 12rem 1fr; }
+  .about-dl dt { margin-top: 0; padding-top: 3px; }
+  .about-dl dd { padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+}
+.about-members { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; font-size: 16px; }
+.about-members li::marker { color: var(--uv-green); font-weight: 700; }
+.menu-info { margin: 14px 0 0; }
